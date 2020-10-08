@@ -203,6 +203,26 @@ func TestOverwriteFlag(t *testing.T) {
 	}
 }
 
+func TestCreateGitOpsRepository(t *testing.T) {
+	defer func(f secrets.PublicKeyFunc) {
+		secrets.DefaultPublicKeyFunc = f
+	}(secrets.DefaultPublicKeyFunc)
+
+	secrets.DefaultPublicKeyFunc = makeTestKey(t)
+	fakeFs := ioutils.NewMemoryFilesystem()
+	params := &BootstrapOptions{
+		Prefix:               "tst-",
+		GitOpsRepoURL:        testGitOpsRepo,
+		ImageRepo:            "image/repo",
+		GitOpsWebhookSecret:  "123",
+		ServiceRepoURL:       testSvcRepo,
+		ServiceWebhookSecret: "456",
+	}
+	err := Bootstrap(params, fakeFs)
+	assertNoError(t, err)
+
+}
+
 func TestCreateManifest(t *testing.T) {
 	repoURL := "https://github.com/foo/bar.git"
 	want := &config.Manifest{
