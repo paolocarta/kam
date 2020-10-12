@@ -1,6 +1,34 @@
 package pipelines
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/google/go-cmp/cmp"
+	"github.com/jenkins-x/go-scm/scm"
+	"github.com/jenkins-x/go-scm/scm/driver/fake"
+)
+
+func TestBootstrapRepository(t *testing.T) {
+	fakeData := stubOutFactory(t)
+
+	err := BootstrapRepository(&BootstrapOptions{
+		GitOpsRepoURL:      "https://example.com/testing/test-repo.git",
+		GitHostAccessToken: "this-is-a-test-token",
+	})
+	assertNoError(t, err)
+
+	want := []*scm.RepositoryInput{
+		{
+			Namespace:   "testing",
+			Name:        "test-repo",
+			Description: "Bootstrapped GitOps repository",
+			Private:     true,
+		},
+	}
+	if diff := cmp.Diff(want, fakeData.CreateRepositories); diff != "" {
+		t.Fatalf("BootstrapRepository failed:\n%s", diff)
+	}
+}
 
 func TestRepoURL(t *testing.T) {
 	urlTests := []struct {
@@ -23,4 +51,17 @@ func TestRepoURL(t *testing.T) {
 			}
 		})
 	}
+}
+
+func stubOutFactory(t *testing.T) *fake.Data {
+	f := defaultClientFactory
+	t.Cleanup(func() {
+		defaultClientFactory = f
+	})
+
+	client, data := fake.NewDefault()
+	f = func(repoURL string) (*scm.Client, error) {
+		return client, nil
+	}
+	return data
 }

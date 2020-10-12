@@ -145,6 +145,7 @@ func TestBootstrapManifest(t *testing.T) {
 	if diff := cmp.Diff(wantResources, k.Resources); diff != "" {
 		t.Fatalf("base kustomization failed:\n%s\n", diff)
 	}
+	t.Fatal("expected to create a git repository.")
 }
 
 func TestOrgRepoFromURL(t *testing.T) {

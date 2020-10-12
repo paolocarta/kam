@@ -3,7 +3,16 @@ package pipelines
 import (
 	"fmt"
 	"net/url"
+
+	"github.com/jenkins-x/go-scm/scm/factory"
 )
+
+var defaultClientFactory = factory.FromRepoURL
+
+// BootstrapRepository creates an authenticated request.
+func BootstrapRepository(o *BootstrapOptions) error {
+	return nil
+}
 
 func repoURL(u string) (string, error) {
 	parsed, err := url.Parse(u)
