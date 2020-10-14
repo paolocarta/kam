@@ -1,6 +1,7 @@
 package pipelines
 
 import (
+	"net/url"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -9,11 +10,12 @@ import (
 )
 
 func TestBootstrapRepository(t *testing.T) {
-	fakeData := stubOutFactory(t)
+	token := "this-is-a-test-token"
+	fakeData := stubOutFactory(t, token)
 
 	err := BootstrapRepository(&BootstrapOptions{
 		GitOpsRepoURL:      "https://example.com/testing/test-repo.git",
-		GitHostAccessToken: "this-is-a-test-token",
+		GitHostAccessToken: token,
 	})
 	assertNoError(t, err)
 
@@ -21,7 +23,7 @@ func TestBootstrapRepository(t *testing.T) {
 		{
 			Namespace:   "testing",
 			Name:        "test-repo",
-			Description: "Bootstrapped GitOps repository",
+			Description: defaultRepoDescription,
 			Private:     true,
 		},
 	}
@@ -53,14 +55,22 @@ func TestRepoURL(t *testing.T) {
 	}
 }
 
-func stubOutFactory(t *testing.T) *fake.Data {
+func stubOutFactory(t *testing.T, authToken string) *fake.Data {
 	f := defaultClientFactory
 	t.Cleanup(func() {
 		defaultClientFactory = f
 	})
 
 	client, data := fake.NewDefault()
-	f = func(repoURL string) (*scm.Client, error) {
+	defaultClientFactory = func(repoURL string) (*scm.Client, error) {
+		u, err := url.Parse(repoURL)
+		if err != nil {
+			return nil, err
+		}
+		want := ":" + authToken
+		if a := u.User.String(); a != want {
+			t.Fatalf("client failed auth: got %q, want %q", a, want)
+		}
 		return client, nil
 	}
 	return data
