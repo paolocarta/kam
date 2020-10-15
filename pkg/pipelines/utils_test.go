@@ -36,6 +36,18 @@ func TestBootstrapRepository_with_org(t *testing.T) {
 	assertRepositoryCreated(t, fakeData, "testing", "test-repo")
 }
 
+func TestBootstrapRepository_with_no_access_token(t *testing.T) {
+	token := "this-is-a-test-token"
+	fakeData := stubOutGitClientFactory(t, token)
+	fakeData.CurrentUser = scm.User{Login: "test-user"}
+
+	err := BootstrapRepository(&BootstrapOptions{
+		GitOpsRepoURL: "https://example.com/testing/test-repo.git",
+	})
+	assertNoError(t, err)
+	refuteRepositoryCreated(t, fakeData)
+}
+
 func TestRepoURL(t *testing.T) {
 	urlTests := []struct {
 		repoURL string
@@ -94,6 +106,13 @@ func assertRepositoryCreated(t *testing.T, data *fake.Data, org, name string) {
 	}
 	if diff := cmp.Diff(want, data.CreateRepositories); diff != "" {
 		t.Fatalf("BootstrapRepository failed:\n%s", diff)
+	}
+}
+
+func refuteRepositoryCreated(t *testing.T, data *fake.Data) {
+	t.Helper()
+	if l := len(data.CreateRepositories); l != 0 {
+		t.Fatalf("BootstrapRepository created repositories: %d", l)
 	}
 
 }

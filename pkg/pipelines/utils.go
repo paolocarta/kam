@@ -16,6 +16,10 @@ const defaultRepoDescription = "Bootstrapped GitOps Repository"
 
 // BootstrapRepository creates an authenticated request.
 func BootstrapRepository(o *BootstrapOptions) error {
+	if o.GitHostAccessToken == "" {
+		return nil
+	}
+
 	u, err := url.Parse(o.GitOpsRepoURL)
 	if err != nil {
 		return fmt.Errorf("failed to parse GitOps repo URL %q: %w", o.GitOpsRepoURL, err)
