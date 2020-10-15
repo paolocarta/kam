@@ -38,7 +38,6 @@ $ kam bootstrap \
 ```
 The `kam bootstrap` command supports both [flag mode](../../commands/bootstrap#flag-mode) and [interactive mode](../../commands/bootstrap#interactive-mode). Executing the above command will generate the GitOps directory and the required resources.
 
-
 In the event of using a self-hosted _GitHub Enterprise_ or _GitLab Community/Enterprise Edition_ if the driver name isn't evident from the repository URL, use the `--private-repo-driver` flag to select _github_ or _gitlab_.
 
 For more details see the [ArgoCD documentation](https://argoproj.github.io/argo-cd/user-guide/private-repositories).
@@ -59,6 +58,10 @@ The name of the app and service is derived from the last component of your
 `service-repo-url` e.g. if you bootstrap with `--service-repo-url
 https://github.com/myorg/myproject.git` this would bootstrap an app called
 `app-myproject` and a service called `myproject`.
+
+Finally, the GitOps repository is created automatically if credentials are
+provided, this will create a private repository for pushing your generated
+resources to.
 
 ## Prefixing namespaces
 

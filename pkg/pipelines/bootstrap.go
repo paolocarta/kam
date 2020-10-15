@@ -150,7 +150,12 @@ func Bootstrap(o *BootstrapOptions, appFs afero.Fs) error {
 	log.Successf("Created dev, stage and CICD environments")
 	_, err = yaml.WriteResources(appFs, o.OutputPath, bootstrapped)
 
-	return BootstrapRepository(o)
+	err = BootstrapRepository(o)
+	if err != nil {
+		return fmt.Errorf("failed to create the gitops repository: %q: %w", o.GitOpsRepoURL, err)
+	}
+	log.Successf("Created repository")
+	return nil
 }
 
 func maybeMakeHookSecrets(o *BootstrapOptions) error {
