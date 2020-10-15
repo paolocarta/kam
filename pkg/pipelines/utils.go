@@ -21,18 +21,33 @@ func BootstrapRepository(o *BootstrapOptions) error {
 		return fmt.Errorf("failed to parse GitOps repo URL %q: %w", o.GitOpsRepoURL, err)
 	}
 	parts := strings.Split(u.Path, "/")
-	ri := &scm.RepositoryInput{
-		Private:     true,
-		Description: defaultRepoDescription,
-		Namespace:   parts[1],
-		Name:        strings.TrimSuffix(strings.Join(parts[2:], "/"), ".git"),
-	}
+	org := parts[1]
+	repoName := strings.TrimSuffix(strings.Join(parts[2:], "/"), ".git")
 	u.User = url.UserPassword("", o.GitHostAccessToken)
+
 	client, err := defaultClientFactory(u.String())
 	if err != nil {
 		return fmt.Errorf("failed to create a client to access %q: %w", o.GitOpsRepoURL, err)
 	}
+	ctx := context.Background()
+	// If we're creating the repository in a personal user's account, it's a
+	// different API call that's made, clearing the org triggers go-scm to use
+	// the "create repo in personal account" endpoint.
+	currentUser, _, err := client.Users.Find(ctx)
+	if currentUser.Login == org {
+		org = ""
+	}
+
+	ri := &scm.RepositoryInput{
+		Private:     true,
+		Description: defaultRepoDescription,
+		Namespace:   org,
+		Name:        repoName,
+	}
 	_, _, err = client.Repositories.Create(context.Background(), ri)
+	if err != nil {
+		return fmt.Errorf("failed to create repository %q in namespace %q: %w", repoName, org, err)
+	}
 	return err
 }
 

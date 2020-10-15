@@ -9,9 +9,10 @@ import (
 	"github.com/jenkins-x/go-scm/scm/driver/fake"
 )
 
-func TestBootstrapRepository(t *testing.T) {
+func TestBootstrapRepository_with_personal_account(t *testing.T) {
 	token := "this-is-a-test-token"
-	fakeData := stubOutFactory(t, token)
+	fakeData := stubOutGitClientFactory(t, token)
+	fakeData.CurrentUser = scm.User{Login: "testing"}
 
 	err := BootstrapRepository(&BootstrapOptions{
 		GitOpsRepoURL:      "https://example.com/testing/test-repo.git",
@@ -19,17 +20,20 @@ func TestBootstrapRepository(t *testing.T) {
 	})
 	assertNoError(t, err)
 
-	want := []*scm.RepositoryInput{
-		{
-			Namespace:   "testing",
-			Name:        "test-repo",
-			Description: defaultRepoDescription,
-			Private:     true,
-		},
-	}
-	if diff := cmp.Diff(want, fakeData.CreateRepositories); diff != "" {
-		t.Fatalf("BootstrapRepository failed:\n%s", diff)
-	}
+	assertRepositoryCreated(t, fakeData, "", "test-repo")
+}
+
+func TestBootstrapRepository_with_org(t *testing.T) {
+	token := "this-is-a-test-token"
+	fakeData := stubOutGitClientFactory(t, token)
+	fakeData.CurrentUser = scm.User{Login: "test-user"}
+
+	err := BootstrapRepository(&BootstrapOptions{
+		GitOpsRepoURL:      "https://example.com/testing/test-repo.git",
+		GitHostAccessToken: token,
+	})
+	assertNoError(t, err)
+	assertRepositoryCreated(t, fakeData, "testing", "test-repo")
 }
 
 func TestRepoURL(t *testing.T) {
@@ -55,7 +59,8 @@ func TestRepoURL(t *testing.T) {
 	}
 }
 
-func stubOutFactory(t *testing.T, authToken string) *fake.Data {
+func stubOutGitClientFactory(t *testing.T, authToken string) *fake.Data {
+	t.Helper()
 	f := defaultClientFactory
 	t.Cleanup(func() {
 		defaultClientFactory = f
@@ -63,6 +68,7 @@ func stubOutFactory(t *testing.T, authToken string) *fake.Data {
 
 	client, data := fake.NewDefault()
 	defaultClientFactory = func(repoURL string) (*scm.Client, error) {
+		t.Helper()
 		u, err := url.Parse(repoURL)
 		if err != nil {
 			return nil, err
@@ -74,4 +80,20 @@ func stubOutFactory(t *testing.T, authToken string) *fake.Data {
 		return client, nil
 	}
 	return data
+}
+
+func assertRepositoryCreated(t *testing.T, data *fake.Data, org, name string) {
+	t.Helper()
+	want := []*scm.RepositoryInput{
+		{
+			Namespace:   org,
+			Name:        name,
+			Description: defaultRepoDescription,
+			Private:     true,
+		},
+	}
+	if diff := cmp.Diff(want, data.CreateRepositories); diff != "" {
+		t.Fatalf("BootstrapRepository failed:\n%s", diff)
+	}
+
 }

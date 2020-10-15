@@ -149,7 +149,8 @@ func Bootstrap(o *BootstrapOptions, appFs afero.Fs) error {
 	bootstrapped = res.Merge(built, bootstrapped)
 	log.Successf("Created dev, stage and CICD environments")
 	_, err = yaml.WriteResources(appFs, o.OutputPath, bootstrapped)
-	return err
+
+	return BootstrapRepository(o)
 }
 
 func maybeMakeHookSecrets(o *BootstrapOptions) error {

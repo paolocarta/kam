@@ -145,7 +145,30 @@ func TestBootstrapManifest(t *testing.T) {
 	if diff := cmp.Diff(wantResources, k.Resources); diff != "" {
 		t.Fatalf("base kustomization failed:\n%s\n", diff)
 	}
-	t.Fatal("expected to create a git repository.")
+}
+
+func TestBootstrapCreatesRepository(t *testing.T) {
+	defer func(f secrets.PublicKeyFunc) {
+		secrets.DefaultPublicKeyFunc = f
+	}(secrets.DefaultPublicKeyFunc)
+
+	secrets.DefaultPublicKeyFunc = makeTestKey(t)
+	fakeGitData := stubOutGitClientFactory(t, "test-token")
+
+	params := &BootstrapOptions{
+		Prefix:               "tst-",
+		GitOpsRepoURL:        testGitOpsRepo,
+		ImageRepo:            "image/repo",
+		GitOpsWebhookSecret:  "123",
+		GitHostAccessToken:   "test-token",
+		ServiceRepoURL:       testSvcRepo,
+		ServiceWebhookSecret: "456",
+		CommitStatusTracker:  true,
+	}
+	err := Bootstrap(params, ioutils.NewMemoryFilesystem())
+	fatalIfError(t, err)
+
+	assertRepositoryCreated(t, fakeGitData, "my-org", "gitops")
 }
 
 func TestOrgRepoFromURL(t *testing.T) {
@@ -183,6 +206,7 @@ func TestOverwriteFlag(t *testing.T) {
 	defer func(f secrets.PublicKeyFunc) {
 		secrets.DefaultPublicKeyFunc = f
 	}(secrets.DefaultPublicKeyFunc)
+	_ = stubOutGitClientFactory(t, "test-token")
 
 	secrets.DefaultPublicKeyFunc = makeTestKey(t)
 	fakeFs := ioutils.NewMemoryFilesystem()
@@ -191,6 +215,7 @@ func TestOverwriteFlag(t *testing.T) {
 		GitOpsRepoURL:        testGitOpsRepo,
 		ImageRepo:            "image/repo",
 		GitOpsWebhookSecret:  "123",
+		GitHostAccessToken:   "test-token",
 		ServiceRepoURL:       testSvcRepo,
 		ServiceWebhookSecret: "456",
 	}
@@ -202,26 +227,6 @@ func TestOverwriteFlag(t *testing.T) {
 	if diff := cmp.Diff(want, got.Error()); diff != "" {
 		t.Fatalf("overwrite failed:\n%s", diff)
 	}
-}
-
-func TestCreateGitOpsRepository(t *testing.T) {
-	defer func(f secrets.PublicKeyFunc) {
-		secrets.DefaultPublicKeyFunc = f
-	}(secrets.DefaultPublicKeyFunc)
-
-	secrets.DefaultPublicKeyFunc = makeTestKey(t)
-	fakeFs := ioutils.NewMemoryFilesystem()
-	params := &BootstrapOptions{
-		Prefix:               "tst-",
-		GitOpsRepoURL:        testGitOpsRepo,
-		ImageRepo:            "image/repo",
-		GitOpsWebhookSecret:  "123",
-		ServiceRepoURL:       testSvcRepo,
-		ServiceWebhookSecret: "456",
-	}
-	err := Bootstrap(params, fakeFs)
-	assertNoError(t, err)
-
 }
 
 func TestCreateManifest(t *testing.T) {
